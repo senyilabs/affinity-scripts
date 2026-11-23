@@ -1,0 +1,37 @@
+{
+  "scripts": [
+    {
+      "id": "senyilabs-photo-palette",
+      "name": "Photo Palette",
+      "description": "Pulls the main colours out of a photo and adds them as swatches with hex codes along its bottom edge.",
+      "version": "1.0.0",
+      "author": "Senyi Labs",
+      "category": "Color",
+      "image": "previews/photo-palette.jpg",
+      "url": "https://senyilabs.com",
+      "download_url": "https://raw.githubusercontent.com/senyilabs/affinity-scripts/main/dist/photo-palette.js"
+    },
+    {
+      "id": "senyilabs-watermark",
+      "name": "Watermark",
+      "description": "Adds a text watermark (corner, centre or repeated across the photo) to this document or every open one.",
+      "version": "1.0.0",
+      "author": "Senyi Labs",
+      "category": "Export",
+      "image": "previews/watermark.jpg",
+      "url": "https://senyilabs.com",
+      "download_url": "https://raw.githubusercontent.com/senyilabs/affinity-scripts/main/dist/watermark.js"
+    },
+    {
+      "id": "senyilabs-contact-sheet",
+      "name": "Contact Sheet",
+      "description": "Puts every photo in a folder on a new A4 page in a grid, with file names: for proofs, picks and printing.",
+      "version": "1.0.0",
+      "author": "Senyi Labs",
+      "category": "Print",
+      "image": "previews/contact-sheet.jpg",
+      "url": "https://senyilabs.com",
+      "download_url": "https://raw.githubusercontent.com/senyilabs/affinity-scripts/main/dist/contact-sheet.js"
+    }
+  ]
+}
