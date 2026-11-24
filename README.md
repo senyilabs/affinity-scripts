@@ -20,8 +20,10 @@ Scripting).
 
 ## Paid scripts
 
-Two Photoshop features Affinity doesn't have, as scripts, at [senyilabs.com](https://senyilabs.com):
-[Match Color](https://senyilabs.com/match-color) gives a photo the colours and light of another one, and
+Photoshop features Affinity doesn't have, as scripts, at [senyilabs.com](https://senyilabs.com):
+[Content-Aware Move](https://senyilabs.com/content-aware-move) moves an object and fills the gap it leaves,
+[Match Color](https://senyilabs.com/match-color) gives a photo the colours and light of another one,
+[Puppet Warp](https://senyilabs.com/puppet-warp) bends parts of a photo with pins, and
 [Content-Aware Scale](https://senyilabs.com/content-aware-scale) resizes photos without squashing people or buildings.
 
 ## For developers
