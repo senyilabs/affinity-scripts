@@ -19,3 +19,10 @@ export function tiles(page, text, gap = 1.5) {
   }
   return out;
 }
+
+// The watermark text for one photo: {file} becomes the photo's file name without its extension (the number the
+// camera gave it, e.g. DSC_1234), so each photo in a batch gets its own.
+export function fillIn(text, title) {
+  const stem = String(title || '').split(/[\\/]/).pop().replace(/\.[^.]+$/, '');
+  return String(text).replace(/\{file\}/gi, stem);
+}

@@ -6,7 +6,7 @@ const REPO = 'https://raw.githubusercontent.com/senyilabs/affinity-scripts/main'
 const SCRIPTS = [
   { file: 'photo-palette', name: 'Photo Palette', module: 'palette', version: '1.0.0',
     category: 'Color', description: 'Pulls the main colours out of a photo and adds them as swatches with hex codes along its bottom edge.' },
-  { file: 'watermark', name: 'Watermark', module: 'watermark', version: '1.0.1',
+  { file: 'watermark', name: 'Watermark', module: 'watermark', version: '1.1.0',
     category: 'Export', description: 'Adds a text watermark (corner, centre or repeated across the photo) to this document or every open one.' },
   { file: 'contact-sheet', name: 'Contact Sheet', module: 'contactsheet', version: '1.0.1',
     category: 'Print', description: 'Puts every photo in a folder on a new A4 page in a grid, with file names: for proofs, picks and printing.' },

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { place, tiles } from '../src/watermark.js';
+import { place, tiles, fillIn } from '../src/watermark.js';
 
 const page = { width: 1000, height: 600 }, text = { width: 200, height: 40 };
 
@@ -19,4 +19,10 @@ test('tiles cover the page, corners included', () => {
     const near = Math.min(...t.map((p) => Math.hypot(p.x - corner.x, p.y - corner.y)));
     assert.ok(near < 300, `corner ${JSON.stringify(corner)} is ${near} px from a copy`);
   }
+});
+
+test('{file} becomes the file name without extension', () => {
+  assert.equal(fillIn('{file}', 'DSC_1234.JPG'), 'DSC_1234');
+  assert.equal(fillIn('© Wim · {FILE}', '/Users/w/Pictures/IMG_0042.cr2'), '© Wim · IMG_0042');
+  assert.equal(fillIn('© Your Name', 'photo.jpg'), '© Your Name');
 });

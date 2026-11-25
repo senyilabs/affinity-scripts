@@ -1,7 +1,7 @@
-// The Affinity side of Watermark. tools/build.mjs puts src/watermark.js in front of this file, so place() and tiles()
-// are in scope. Adds the text to this document or to every open one, inside an invisible page-sized frame named
-// Watermark at the top of the layers: the frame clips repeated copies at the edges of the photo, and it can be moved,
-// edited or deleted like any other layer.
+// The Affinity side of Watermark. tools/build.mjs puts src/watermark.js in front of this file, so place(), tiles()
+// and fillIn() are in scope. Adds the text to this document or to every open one, inside an invisible page-sized
+// frame named Watermark at the top of the layers: the frame clips repeated copies at the edges of the photo, and it
+// can be moved, edited or deleted like any other layer.
 'use strict';
 
 const { Document, SpatialAnchor } = require('/document.js');
@@ -49,7 +49,7 @@ function watermark(doc, o) {
 
   const inner = AddChildNodesCommandBuilder.create();
   inner.setInsertionTarget(group);
-  inner.addNode(textDefinition(doc, o.text, size, o.colour, o.font));
+  inner.addNode(textDefinition(doc, fillIn(o.text, doc.title), size, o.colour, o.font));
   const typed = inner.createCommand(false);
   doc.executeCommand(typed);
   const node = typed.newNodes[0];
@@ -82,6 +82,7 @@ function main() {
   const col = dlg.addColumn();
   const g = col.addGroup('Text');
   const text = g.addTextBox('Text', '© Your Name');
+  g.addStaticText('', 'Type {file} to add each photo\'s file name, e.g. the camera\'s photo number.');
   const font = g.addFontPicker('Font');
   const colour = g.addColourPicker('Colour', Colour.createRGBA8({ r: 255, g: 255, b: 255, alpha: 255 }));
   const size = g.addUnitValueEditor('Size (of the photo width)', UnitType.Percentage, UnitType.Percentage, 4, 1, 30).setPrecision(1);
