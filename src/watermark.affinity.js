@@ -1,13 +1,15 @@
 // The Affinity side of Watermark. tools/build.mjs puts src/watermark.js in front of this file, so place() and tiles()
-// are in scope. Adds the text, in a group named Watermark at the top of the layers, to this document or to every open
-// one; the group can be moved, edited or deleted like any other.
+// are in scope. Adds the text to this document or to every open one, inside an invisible page-sized frame named
+// Watermark at the top of the layers: the frame clips repeated copies at the edges of the photo, and it can be moved,
+// edited or deleted like any other layer.
 'use strict';
 
 const { Document, SpatialAnchor } = require('/document.js');
 const { Dialog, DialogResult } = require('/dialog.js');
 const { AddChildNodesCommandBuilder, CompoundCommandBuilder, DocumentCommand } = require('/commands.js');
-const { Transform } = require('/geometry.js');
-const { ContainerNodeDefinition, ArtTextNodeDefinition } = require('/nodes.js');
+const { ShapeNodeDefinition, ArtTextNodeDefinition } = require('/nodes.js');
+const { ShapeRectangle } = require('/shapes.js');
+const { Rectangle, Transform } = require('/geometry.js');
 const { StoryBuilder } = require('/storybuilder.js');
 const { GlyphAtts } = require('/glyphatts.js');
 const { FillDescriptor, SolidFill } = require('/fills.js');
@@ -34,11 +36,16 @@ function watermark(doc, o) {
   const page = { width: doc.widthPixels, height: doc.heightPixels };
   const size = page.width * o.size;
 
+  // An unfilled rectangle the size of the page: whatever is inside it is clipped to it.
+  const frame = ShapeNodeDefinition.createDefault();
+  frame.shape = ShapeRectangle.create();
+  frame.setBoundingRectangle(new Rectangle(0, 0, page.width, page.height));
   const add = AddChildNodesCommandBuilder.create();
-  add.addNode(ContainerNodeDefinition.create(TITLE));
+  add.addNode(frame);
   const made = add.createCommand(false);
   doc.executeCommand(made);
   const group = made.newNodes[0];
+  group.userDescription = TITLE;
 
   const inner = AddChildNodesCommandBuilder.create();
   inner.setInsertionTarget(group);

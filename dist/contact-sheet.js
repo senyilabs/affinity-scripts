@@ -1,7 +1,7 @@
 /**
  * name: Contact Sheet
  * description: Puts every photo in a folder on a new A4 page in a grid, with file names: for proofs, picks and printing.
- * version: 1.0.0
+ * version: 1.0.1
  * author: Senyi Labs
  */
 'use strict';
@@ -159,7 +159,13 @@ function main() {
 
   const started = Date.now();
   const folder = folderOf(chosen);
-  let files = listFolder(folder);
+  let files;
+  try {
+    files = listFolder(folder);
+  } catch (e) {
+    // Affinity lets scripts read only the folders allowed in its settings (the Desktop, plus any you add).
+    return alert(`Affinity didn't let the script read the folder ${folder} (${e.message}).\n\nIn Affinity, open Settings → Scripting and add this folder (or a folder above it) to the folders scripts may access, or copy the photos into a folder on your Desktop. Then run Contact Sheet again.`);
+  }
   if (!files.length) return alert(`No photos found in ${folder}.`);
   const skipped = Math.max(0, files.length - MAX);
   files = files.slice(0, MAX);
