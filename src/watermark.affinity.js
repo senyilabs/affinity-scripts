@@ -1,7 +1,7 @@
-// The Affinity side of Watermark. tools/build.mjs puts src/watermark.js in front of this file, so place(), tiles()
-// and fillIn() are in scope. Adds the text to this document or to every open one, inside an invisible page-sized
-// frame named Watermark at the top of the layers: the frame clips repeated copies at the edges of the photo, and it
-// can be moved, edited or deleted like any other layer.
+// The Affinity side of Watermark. tools/build.mjs puts src/watermark.js in front of this file, so place(), tiles(),
+// whole() and fillIn() are in scope. Adds the text to this document or to every open one, inside an invisible
+// page-sized frame named Watermark at the top of the layers: the frame clips repeated copies at the edges of the
+// photo, and it can be moved, edited or deleted like any other layer.
 'use strict';
 
 const { Document, SpatialAnchor } = require('/document.js');
@@ -61,13 +61,15 @@ function watermark(doc, o) {
   } else {
     // Copies at an angle across the page; the first one is moved to the first spot instead of copied.
     const centre = Transform.createTranslate(-(box.x + box.width / 2), -(box.y + box.height / 2));
-    const spots = tiles(page, box);
-    const all = CompoundCommandBuilder.create();
+    const all = tiles(page, box);
+    const spots = o.wholeOnly ? whole(all, page, box, Math.PI / 6) : all;
+    if (!spots.length) spots.push({ x: page.width / 2, y: page.height / 2 });
+    const moves = CompoundCommandBuilder.create();
     spots.forEach((c, i) => {
       const xf = Transform.createTranslate(c.x, c.y).multiply(Transform.createRotate(-Math.PI / 6)).multiply(centre);
-      all.addCommand(DocumentCommand.createTransform(Selection.create(doc, node), xf, { duplicateNodes: i < spots.length - 1 }));
+      moves.addCommand(DocumentCommand.createTransform(Selection.create(doc, node), xf, { duplicateNodes: i < spots.length - 1 }));
     });
-    doc.executeCommand(all.createCommand());
+    doc.executeCommand(moves.createCommand());
   }
   doc.executeCommand(DocumentCommand.createSetOpacity(Selection.create(doc, group), o.opacity));
   return group;
@@ -90,6 +92,7 @@ function main() {
   const p = col.addGroup('Placement');
   const anchor = p.addSpatialAnchor('Position', SpatialAnchor.BottomRight);
   const repeat = p.addSwitch('Repeat across the whole photo', false);
+  const wholeOnly = p.addSwitch('When repeating, only whole copies (none cut off at the edges)', true);
   const scope = p.addComboBox('Add to', ['This document', `All open documents (${others + 1})`], 0);
   if (dlg.runModal() !== DialogResult.Ok) return;
 
@@ -97,7 +100,7 @@ function main() {
   if (!words) return alert('Type the watermark text.');
   const options = {
     text: words, font: font.font, colour: colour.value, size: pct(size.value), opacity: pct(opacity.value),
-    anchor: anchor.value?.value ?? anchor.value, repeat: repeat.value,
+    anchor: anchor.value?.value ?? anchor.value, repeat: repeat.value, wholeOnly: wholeOnly.value,
   };
   const docs = scope.selectedIndex === 1 ? [...Document.all] : [current];
   for (const doc of docs) watermark(doc, options);

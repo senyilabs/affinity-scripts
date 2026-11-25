@@ -20,6 +20,14 @@ export function tiles(page, text, gap = 1.5) {
   return out;
 }
 
+// Only the spots where a copy turned by `angle` (radians) fits completely on the page, so no copy is cut off at the
+// edges.
+export function whole(spots, page, text, angle) {
+  const c = Math.abs(Math.cos(angle)), s = Math.abs(Math.sin(angle));
+  const ex = (text.width * c + text.height * s) / 2, ey = (text.width * s + text.height * c) / 2;
+  return spots.filter((p) => p.x - ex >= 0 && p.y - ey >= 0 && p.x + ex <= page.width && p.y + ey <= page.height);
+}
+
 // The watermark text for one photo: {file} becomes the photo's file name without its extension (the number the
 // camera gave it, e.g. DSC_1234), so each photo in a batch gets its own.
 export function fillIn(text, title) {

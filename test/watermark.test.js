@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { place, tiles, fillIn } from '../src/watermark.js';
+import { place, tiles, whole, fillIn } from '../src/watermark.js';
 
 const page = { width: 1000, height: 600 }, text = { width: 200, height: 40 };
 
@@ -25,4 +25,14 @@ test('{file} becomes the file name without extension', () => {
   assert.equal(fillIn('{file}', 'DSC_1234.JPG'), 'DSC_1234');
   assert.equal(fillIn('© Wim · {FILE}', '/Users/w/Pictures/IMG_0042.cr2'), '© Wim · IMG_0042');
   assert.equal(fillIn('© Your Name', 'photo.jpg'), '© Your Name');
+});
+
+test('whole() keeps only copies that fit completely on the page', () => {
+  const spots = tiles(page, text);
+  const kept = whole(spots, page, text, Math.PI / 6);
+  assert.ok(kept.length > 0 && kept.length < spots.length);
+  const ex = (200 * Math.cos(Math.PI / 6) + 40 * Math.sin(Math.PI / 6)) / 2;
+  for (const p of kept) assert.ok(p.x - ex >= 0 && p.x + ex <= page.width);
+  assert.deepEqual(whole([{ x: 500, y: 300 }], page, text, 0), [{ x: 500, y: 300 }]);
+  assert.deepEqual(whole([{ x: 50, y: 300 }], page, text, 0), []);
 });
