@@ -1,6 +1,7 @@
 // The Affinity side of Contact Sheet. tools/build.mjs puts src/contactsheet.js in front of this file, so
-// imageFiles(), cells(), fit() and shrink() are in scope. You pick any photo in a folder; a new A4 document gets every
-// photo in that folder in a grid, each with its file name underneath.
+// imageFiles(), opensAsDocument(), cells(), fit() and shrink() are in scope. You pick any photo in a folder; a new A4
+// document gets every photo in that folder in a grid, each with its file name underneath. Affinity files and RAW
+// photos are included too.
 'use strict';
 
 const { app } = require('/application.js');
@@ -9,7 +10,7 @@ const { Dialog, DialogResult } = require('/dialog.js');
 const { AddChildNodesCommandBuilder, DocumentCommand } = require('/commands.js');
 const { Transform } = require('/geometry.js');
 const { ImageNodeDefinition, ArtTextNodeDefinition } = require('/nodes.js');
-const { Bitmap, PixelBuffer, RasterFormat } = require('/rasterobject.js');
+const { Bitmap, NodeRenderingEngine, PixelBuffer, RasterFormat } = require('/rasterobject.js');
 const { StoryBuilder } = require('/storybuilder.js');
 const { GlyphAtts } = require('/glyphatts.js');
 const { DirectoryIterator } = require('/fs.js');
@@ -28,17 +29,37 @@ function listFolder(folder) {
   return imageFiles(paths);
 }
 
+// All pixels of a raster object (a bitmap, a layer or a rendered page) as { width, height, data }.
+function pixelsOf(source) {
+  const buffer = PixelBuffer.create(source.width, source.height, RasterFormat.RGBA8);
+  source.copyTo(buffer, { x: 0, y: 0, width: source.width, height: source.height }, 0, 0);
+  return { width: source.width, height: source.height, data: new Uint8Array(buffer.buffer) };
+}
+
+// Affinity documents and RAW files: opened, read, then closed again. A file with a single pixel layer (a RAW photo
+// opens as one develop layer, which renders blank) is read from that layer; anything else is rendered as a page.
+// A file the user already has open is read as it is and left open.
+function renderDocument(path) {
+  const wasOpen = [...Document.all].some((d) => String(d.path || '') === String(path));
+  const doc = Document.load(path);
+  try {
+    const layers = [...doc.layers];
+    if (layers.length === 1 && layers[0].rasterInterface) return pixelsOf(layers[0].rasterInterface);
+    return pixelsOf(NodeRenderingEngine.createDefault(doc.currentSpread, RasterFormat.RGBA8));
+  } finally {
+    if (!wasOpen) doc.close();
+  }
+}
+
 // The picture at `path`, shrunk to `maxSide` pixels, as an image node definition; null if it can't be read.
 function picture(path, maxSide) {
-  let bitmap;
+  let full;
   try {
-    bitmap = Bitmap.loadFromFile(path, RasterFormat.RGBA8);
+    full = opensAsDocument(path) ? renderDocument(path) : pixelsOf(Bitmap.loadFromFile(path, RasterFormat.RGBA8));
   } catch (e) {
     return null;
   }
-  const full = PixelBuffer.create(bitmap.width, bitmap.height, RasterFormat.RGBA8);
-  bitmap.copyTo(full, { x: 0, y: 0, width: bitmap.width, height: bitmap.height }, 0, 0);
-  const small = shrink({ width: bitmap.width, height: bitmap.height, data: new Uint8Array(full.buffer) }, maxSide);
+  const small = shrink(full, maxSide);
   const buffer = PixelBuffer.create(small.width, small.height, RasterFormat.RGBA8);
   new Uint8Array(buffer.buffer).set(small.data);
   const def = ImageNodeDefinition.create(RasterFormat.RGBA8);

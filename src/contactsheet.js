@@ -1,6 +1,12 @@
 // Contact sheet layout and image shrinking, free of Affinity so the tests can run it. Sizes are in document pixels.
 
 const IMAGE = /\.(jpe?g|png|tiff?|webp|heic|gif|bmp)$/i;
+// Affinity documents and camera RAW files can't be loaded as plain images; the script opens them as documents.
+const DOCUMENT = /\.(af|afphoto|afdesign|afpub|cr2|cr3|nef|nrw|arw|dng|orf|raf|rw2|pef|srw)$/i;
+const RAW = /\.(cr2|cr3|nef|nrw|arw|dng|orf|raf|rw2|pef|srw)$/i;
+
+// Whether `path` has to be opened as a document to get its picture.
+export const opensAsDocument = (path) => DOCUMENT.test(path);
 
 // Compares names the way a file browser orders them: numbers by value (IMG_2 before IMG_10), letters ignoring case.
 // Written out because Affinity's JavaScript has no Intl, so localeCompare can't take options there.
@@ -16,10 +22,16 @@ function natural(a, b) {
   return pa.length - pb.length;
 }
 
-// The image files among `paths`, in the order a file browser shows them.
+// The pictures among `paths`, in the order a file browser shows them. A RAW file is left out when a JPEG of the same
+// name is next to it (cameras set to RAW + JPEG), since that photo is already on the sheet.
 export function imageFiles(paths) {
   const name = (p) => String(p).split(/[\\/]/).pop();
-  return paths.filter((p) => IMAGE.test(p) && !name(p).startsWith('.')).sort((a, b) => natural(name(a), name(b)));
+  const stem = (p) => name(p).replace(/\.[^.]+$/, '').toLowerCase();
+  const jpegs = new Set(paths.filter((p) => /\.jpe?g$/i.test(p)).map(stem));
+  return paths
+    .filter((p) => (IMAGE.test(p) || DOCUMENT.test(p)) && !name(p).startsWith('.'))
+    .filter((p) => !(RAW.test(p) && jpegs.has(stem(p))))
+    .sort((a, b) => natural(name(a), name(b)));
 }
 
 // `count` cells in `cols` columns filling `page` inside `margin`, with `gap` between cells and `caption` pixels under

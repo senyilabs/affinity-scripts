@@ -7,7 +7,7 @@ Scripting).
 |---|---|
 | **Photo Palette** | Select a photo's pixel layer and run it: the photo's main colours appear as swatches with hex codes along its bottom edge, in a group you can move or delete. Choose 2–12 colours, and whether each swatch's width shows how much of the photo it covers. |
 | **Watermark** | Adds text such as "© Your Name" in a corner, in the middle, or repeated at an angle across the whole photo, to this document or every open one at once. Pick the font, colour, size and opacity. Type `{file}` to put each photo's file name in it, such as the camera's photo number. |
-| **Contact Sheet** | Pick any photo in a folder: a new A4 page gets every photo in that folder in a grid, with the file names underneath. For proofs, picks and printing. |
+| **Contact Sheet** | Pick any photo in a folder: a new A4 page gets every photo in that folder in a grid, with the file names underneath, including Affinity files (.af, .afphoto) and camera RAW files. For proofs, picks and printing. |
 
 ![Photo Palette](previews/photo-palette.jpg)
 

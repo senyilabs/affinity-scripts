@@ -1,7 +1,7 @@
 /**
  * name: Contact Sheet
  * description: Puts every photo in a folder on a new A4 page in a grid, with file names: for proofs, picks and printing.
- * version: 1.0.1
+ * version: 1.1.0
  * author: Senyi Labs
  */
 'use strict';
@@ -10,6 +10,12 @@
 // Contact sheet layout and image shrinking, free of Affinity so the tests can run it. Sizes are in document pixels.
 
 const IMAGE = /\.(jpe?g|png|tiff?|webp|heic|gif|bmp)$/i;
+// Affinity documents and camera RAW files can't be loaded as plain images; the script opens them as documents.
+const DOCUMENT = /\.(af|afphoto|afdesign|afpub|cr2|cr3|nef|nrw|arw|dng|orf|raf|rw2|pef|srw)$/i;
+const RAW = /\.(cr2|cr3|nef|nrw|arw|dng|orf|raf|rw2|pef|srw)$/i;
+
+// Whether `path` has to be opened as a document to get its picture.
+const opensAsDocument = (path) => DOCUMENT.test(path);
 
 // Compares names the way a file browser orders them: numbers by value (IMG_2 before IMG_10), letters ignoring case.
 // Written out because Affinity's JavaScript has no Intl, so localeCompare can't take options there.
@@ -25,10 +31,16 @@ function natural(a, b) {
   return pa.length - pb.length;
 }
 
-// The image files among `paths`, in the order a file browser shows them.
+// The pictures among `paths`, in the order a file browser shows them. A RAW file is left out when a JPEG of the same
+// name is next to it (cameras set to RAW + JPEG), since that photo is already on the sheet.
 function imageFiles(paths) {
   const name = (p) => String(p).split(/[\\/]/).pop();
-  return paths.filter((p) => IMAGE.test(p) && !name(p).startsWith('.')).sort((a, b) => natural(name(a), name(b)));
+  const stem = (p) => name(p).replace(/\.[^.]+$/, '').toLowerCase();
+  const jpegs = new Set(paths.filter((p) => /\.jpe?g$/i.test(p)).map(stem));
+  return paths
+    .filter((p) => (IMAGE.test(p) || DOCUMENT.test(p)) && !name(p).startsWith('.'))
+    .filter((p) => !(RAW.test(p) && jpegs.has(stem(p))))
+    .sort((a, b) => natural(name(a), name(b)));
 }
 
 // `count` cells in `cols` columns filling `page` inside `margin`, with `gap` between cells and `caption` pixels under
@@ -76,8 +88,9 @@ function shrink(image, maxSide) {
 }
 
 // The Affinity side of Contact Sheet. tools/build.mjs puts src/contactsheet.js in front of this file, so
-// imageFiles(), cells(), fit() and shrink() are in scope. You pick any photo in a folder; a new A4 document gets every
-// photo in that folder in a grid, each with its file name underneath.
+// imageFiles(), opensAsDocument(), cells(), fit() and shrink() are in scope. You pick any photo in a folder; a new A4
+// document gets every photo in that folder in a grid, each with its file name underneath. Affinity files and RAW
+// photos are included too.
 
 const { app } = require('/application.js');
 const { Document, NewDocumentOptions } = require('/document.js');
@@ -85,7 +98,7 @@ const { Dialog, DialogResult } = require('/dialog.js');
 const { AddChildNodesCommandBuilder, DocumentCommand } = require('/commands.js');
 const { Transform } = require('/geometry.js');
 const { ImageNodeDefinition, ArtTextNodeDefinition } = require('/nodes.js');
-const { Bitmap, PixelBuffer, RasterFormat } = require('/rasterobject.js');
+const { Bitmap, NodeRenderingEngine, PixelBuffer, RasterFormat } = require('/rasterobject.js');
 const { StoryBuilder } = require('/storybuilder.js');
 const { GlyphAtts } = require('/glyphatts.js');
 const { DirectoryIterator } = require('/fs.js');
@@ -104,17 +117,37 @@ function listFolder(folder) {
   return imageFiles(paths);
 }
 
+// All pixels of a raster object (a bitmap, a layer or a rendered page) as { width, height, data }.
+function pixelsOf(source) {
+  const buffer = PixelBuffer.create(source.width, source.height, RasterFormat.RGBA8);
+  source.copyTo(buffer, { x: 0, y: 0, width: source.width, height: source.height }, 0, 0);
+  return { width: source.width, height: source.height, data: new Uint8Array(buffer.buffer) };
+}
+
+// Affinity documents and RAW files: opened, read, then closed again. A file with a single pixel layer (a RAW photo
+// opens as one develop layer, which renders blank) is read from that layer; anything else is rendered as a page.
+// A file the user already has open is read as it is and left open.
+function renderDocument(path) {
+  const wasOpen = [...Document.all].some((d) => String(d.path || '') === String(path));
+  const doc = Document.load(path);
+  try {
+    const layers = [...doc.layers];
+    if (layers.length === 1 && layers[0].rasterInterface) return pixelsOf(layers[0].rasterInterface);
+    return pixelsOf(NodeRenderingEngine.createDefault(doc.currentSpread, RasterFormat.RGBA8));
+  } finally {
+    if (!wasOpen) doc.close();
+  }
+}
+
 // The picture at `path`, shrunk to `maxSide` pixels, as an image node definition; null if it can't be read.
 function picture(path, maxSide) {
-  let bitmap;
+  let full;
   try {
-    bitmap = Bitmap.loadFromFile(path, RasterFormat.RGBA8);
+    full = opensAsDocument(path) ? renderDocument(path) : pixelsOf(Bitmap.loadFromFile(path, RasterFormat.RGBA8));
   } catch (e) {
     return null;
   }
-  const full = PixelBuffer.create(bitmap.width, bitmap.height, RasterFormat.RGBA8);
-  bitmap.copyTo(full, { x: 0, y: 0, width: bitmap.width, height: bitmap.height }, 0, 0);
-  const small = shrink({ width: bitmap.width, height: bitmap.height, data: new Uint8Array(full.buffer) }, maxSide);
+  const small = shrink(full, maxSide);
   const buffer = PixelBuffer.create(small.width, small.height, RasterFormat.RGBA8);
   new Uint8Array(buffer.buffer).set(small.data);
   const def = ImageNodeDefinition.create(RasterFormat.RGBA8);

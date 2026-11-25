@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { imageFiles, cells, fit, shrink } from '../src/contactsheet.js';
+import { imageFiles, opensAsDocument, cells, fit, shrink } from '../src/contactsheet.js';
 
 test('only images, in file browser order', () => {
   assert.deepEqual(imageFiles(['/a/IMG_10.jpg', '/a/notes.txt', '/a/IMG_2.JPG', '/a/.hidden.png', '/a/b.png', '/a/c.heic']),
@@ -35,4 +35,11 @@ test('shrink averages blocks and leaves small images alone', () => {
   assert.deepEqual([...s.data.slice(0, 4)], [100, 100, 100, 255]);
   const small = { width: 3, height: 2, data: new Uint8Array(24) };
   assert.equal(shrink(small, 10), small);
+});
+
+test('Affinity documents and RAW files are included; a RAW next to its JPEG is not', () => {
+  assert.deepEqual(imageFiles(['/a/IMG_3.CR2', '/a/IMG_3.JPG', '/a/IMG_4.CR2', '/a/edit.afphoto', '/a/new.af', '/a/x.nef']),
+    ['/a/edit.afphoto', '/a/IMG_3.JPG', '/a/IMG_4.CR2', '/a/new.af', '/a/x.nef']);
+  assert.equal(opensAsDocument('/a/IMG_4.CR2'), true);
+  assert.equal(opensAsDocument('/a/b.jpg'), false);
 });
