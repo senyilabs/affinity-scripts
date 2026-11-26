@@ -25,6 +25,7 @@ test('{file} becomes the file name without extension', () => {
   assert.equal(fillIn('{file}', 'DSC_1234.JPG'), 'DSC_1234');
   assert.equal(fillIn('© Wim · {FILE}', '/Users/w/Pictures/IMG_0042.cr2'), '© Wim · IMG_0042');
   assert.equal(fillIn('© Your Name', 'photo.jpg'), '© Your Name');
+  assert.equal(fillIn('(File) [file]', 'IMG_7.jpg'), 'IMG_7 IMG_7');
 });
 
 test('whole() keeps only copies that fit completely on the page', () => {

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { imageFiles, opensAsDocument, cells, fit, shrink } from '../src/contactsheet.js';
+import { imageFiles, opensAsDocument, perPage, cells, fit, shrink } from '../src/contactsheet.js';
 
 test('only images, in file browser order', () => {
   assert.deepEqual(imageFiles(['/a/IMG_10.jpg', '/a/notes.txt', '/a/IMG_2.JPG', '/a/.hidden.png', '/a/b.png', '/a/c.heic']),
@@ -42,4 +42,15 @@ test('Affinity documents and RAW files are included; a RAW next to its JPEG is n
     ['/a/edit.afphoto', '/a/IMG_3.JPG', '/a/IMG_4.CR2', '/a/new.af', '/a/x.nef']);
   assert.equal(opensAsDocument('/a/IMG_4.CR2'), true);
   assert.equal(opensAsDocument('/a/b.jpg'), false);
+});
+
+test('perPage fits rows of square cells, so big folders get more pages instead of tiny pictures', () => {
+  const a4 = { width: 2480, height: 3508 };
+  const opts = { cols: 4, margin: 124, gap: 50, caption: 60 };
+  const n = perPage(a4, opts);
+  assert.equal(n % 4, 0);
+  assert.ok(n >= 16 && n <= 28, String(n));
+  const boxes = cells(n, a4, opts);
+  assert.ok(boxes.at(-1).y + boxes.at(-1).height <= a4.height - 124 + 1);
+  assert.ok(Math.abs(boxes[0].width - boxes[0].height) < 1);
 });

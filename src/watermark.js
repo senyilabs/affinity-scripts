@@ -29,8 +29,9 @@ export function whole(spots, page, text, angle) {
 }
 
 // The watermark text for one photo: {file} becomes the photo's file name without its extension (the number the
-// camera gave it, e.g. DSC_1234), so each photo in a batch gets its own.
+// camera gave it, e.g. DSC_1234), so each photo in a batch gets its own. (file) and [file] work too, since curly
+// brackets are easy to mistake for round ones in the dialog.
 export function fillIn(text, title) {
   const stem = String(title || '').split(/[\\/]/).pop().replace(/\.[^.]+$/, '');
-  return String(text).replace(/\{file\}/gi, stem);
+  return String(text).replace(/[{([]file[})\]]/gi, stem);
 }

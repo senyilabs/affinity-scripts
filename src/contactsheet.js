@@ -34,6 +34,14 @@ export function imageFiles(paths) {
     .sort((a, b) => natural(name(a), name(b)));
 }
 
+// How many pictures go on one page: as many rows of `cols` square cells as fit, so the pictures keep the same, readable
+// size however many photos there are; the rest go on the next pages.
+export function perPage(page, { cols = 4, margin = 0, gap = 0, caption = 0 } = {}) {
+  const width = (page.width - 2 * margin - gap * (cols - 1)) / cols;
+  const rows = Math.max(1, Math.floor((page.height - 2 * margin + gap) / (width + caption + gap)));
+  return rows * cols;
+}
+
 // `count` cells in `cols` columns filling `page` inside `margin`, with `gap` between cells and `caption` pixels under
 // each picture for its file name. Cells are square-ish boxes for the picture: { x, y, width, height }.
 export function cells(count, page, { cols = 4, margin = 0, gap = 0, caption = 0 } = {}) {

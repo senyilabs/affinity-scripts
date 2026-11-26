@@ -1,7 +1,7 @@
 /**
  * name: Watermark
  * description: Adds a text watermark (corner, centre or repeated across the photo) to this document or every open one.
- * version: 1.2.0
+ * version: 1.2.1
  * author: Senyi Labs
  */
 'use strict';
@@ -38,10 +38,11 @@ function whole(spots, page, text, angle) {
 }
 
 // The watermark text for one photo: {file} becomes the photo's file name without its extension (the number the
-// camera gave it, e.g. DSC_1234), so each photo in a batch gets its own.
+// camera gave it, e.g. DSC_1234), so each photo in a batch gets its own. (file) and [file] work too, since curly
+// brackets are easy to mistake for round ones in the dialog.
 function fillIn(text, title) {
   const stem = String(title || '').split(/[\\/]/).pop().replace(/\.[^.]+$/, '');
-  return String(text).replace(/\{file\}/gi, stem);
+  return String(text).replace(/[{([]file[})\]]/gi, stem);
 }
 
 // The Affinity side of Watermark. tools/build.mjs puts src/watermark.js in front of this file, so place(), tiles(),
