@@ -6,8 +6,8 @@ Scripting).
 | Script | What it does |
 |---|---|
 | **Photo Palette** | Select a photo's pixel layer and run it: the photo's main colours appear as swatches with hex codes along its bottom edge, in a group you can move or delete. Choose 2–12 colours, and whether each swatch's width shows how much of the photo it covers. |
-| **Watermark** | Adds text such as "© Your Name" in a corner, in the middle, or repeated at an angle across the whole photo (whole copies only, or cut off at the edges), to this document or every open one at once. Pick the font, colour, size and opacity. Type `{file}` to put each photo's file name in it, such as the camera's photo number. |
-| **Contact Sheet** | Pick any photo in a folder: a new A4 document gets every photo in that folder in a grid (more pages when there are many), with the file names underneath, including Affinity files (.af, .afphoto) and camera RAW files. For proofs, picks and printing. |
+| **Watermark** | Adds text such as "© Your Name" in a corner, in the middle, or repeated at an angle across the whole photo (whole copies only, or cut off at the edges), to this document or every open one at once. Pick the font, colour, size and opacity. Type `{file}` to put each photo's file name in it, such as the camera's photo number. Turn on "Remember these settings" to have the dialog open with your own choices next time (kept in "Watermark settings.json" on your Desktop, so Affinity must allow scripts to use the Desktop in Settings → Scripting). |
+| **Contact Sheet** | Pick any photo in a folder: a new A4 document gets every photo in that folder in a grid (more pages when there are many), with the file names underneath, including Affinity files (.af, .afphoto) and camera RAW files. (To read those, the script opens and closes each one, so they show up in Affinity's Recents; scripts have no way to avoid that.) For proofs, picks and printing. |
 
 ![Photo Palette](previews/photo-palette.jpg)
 

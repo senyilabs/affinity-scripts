@@ -35,3 +35,42 @@ export function fillIn(text, title) {
   const stem = String(title || '').split(/[\\/]/).pop().replace(/\.[^.]+$/, '');
   return String(text).replace(/[{([]file[})\]]/gi, stem);
 }
+
+// What the dialog starts with when nothing is remembered. Size and opacity are whole percentages, `anchor` is the
+// name of Affinity's SpatialAnchor value.
+export const DEFAULTS = {
+  text: '© Your Name', colour: { r: 255, g: 255, b: 255, alpha: 255 }, size: 4, opacity: 60,
+  anchor: 'BottomRight', repeat: false, wholeOnly: true,
+};
+
+// The remembered settings from the saved file's text (or null when there is none), checked field by field so a
+// damaged or older file falls back to the defaults instead of breaking the dialog. `remembered` is false when there
+// was nothing to read, or the file says to forget.
+export function readSettings(json) {
+  let saved = null;
+  try { saved = json ? JSON.parse(json) : null; } catch { saved = null; }
+  const ok = saved && typeof saved === 'object' && saved.remember === true;
+  const s = ok ? saved : {};
+  const num = (v, lo, hi, d) => (typeof v === 'number' && v >= lo && v <= hi ? v : d);
+  const byte = (v) => num(v, 0, 255, -1);
+  const c = s.colour || {};
+  const colour = [c.r, c.g, c.b, c.alpha].map(byte).includes(-1) ? DEFAULTS.colour
+    : { r: c.r, g: c.g, b: c.b, alpha: c.alpha };
+  return {
+    remembered: !!ok,
+    settings: {
+      text: typeof s.text === 'string' && s.text.trim() ? s.text : DEFAULTS.text,
+      colour,
+      size: num(s.size, 1, 30, DEFAULTS.size),
+      opacity: num(s.opacity, 5, 100, DEFAULTS.opacity),
+      anchor: typeof s.anchor === 'string' && /^[A-Za-z]+$/.test(s.anchor) ? s.anchor : DEFAULTS.anchor,
+      repeat: typeof s.repeat === 'boolean' ? s.repeat : DEFAULTS.repeat,
+      wholeOnly: typeof s.wholeOnly === 'boolean' ? s.wholeOnly : DEFAULTS.wholeOnly,
+    },
+  };
+}
+
+// The text to save: the settings to remember, or only a note to forget them when the switch was turned off.
+export function writeSettings(settings, remember) {
+  return JSON.stringify(remember ? { remember: true, ...settings } : { remember: false }, null, 2) + '\n';
+}

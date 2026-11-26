@@ -1,9 +1,14 @@
 // The Affinity side of Watermark. tools/build.mjs puts src/watermark.js in front of this file, so place(), tiles(),
-// whole() and fillIn() are in scope. Adds the text to this document or to every open one, inside an invisible
-// page-sized frame named Watermark at the top of the layers: the frame clips repeated copies at the edges of the
-// photo, and it can be moved, edited or deleted like any other layer.
+// whole(), fillIn(), DEFAULTS, readSettings() and writeSettings() are in scope. Adds the text to this document or
+// to every open one, inside an invisible page-sized frame named Watermark at the top of the layers: the frame clips
+// repeated copies at the edges of the photo, and it can be moved, edited or deleted like any other layer.
+// "Remember these settings" keeps the dialog's choices in a file on the Desktop, the one folder Affinity lets scripts
+// write to (Settings → Scripting); scripts can't ask for more access themselves. Hidden (dot) files are refused, so
+// the file has a plain name.
 'use strict';
 
+const { Application } = require('/application.js');
+const { File } = require('/fs.js');
 const { Document, SpatialAnchor } = require('/document.js');
 const { Dialog, DialogResult } = require('/dialog.js');
 const { AddChildNodesCommandBuilder, CompoundCommandBuilder, DocumentCommand } = require('/commands.js');
@@ -19,6 +24,31 @@ const { UnitType } = require('/units.js');
 
 const TITLE = 'Watermark';
 const pct = (v) => (v > 1 ? v / 100 : v); // whole percentages in Affinity 3.3; a fraction would mean an older build
+const settingsPath = () => `${Application.userDesktopPath}/Watermark settings.json`;
+
+// SpatialAnchor is Affinity's own enum: saved by name, compared by number.
+const anchorNumber = (a) => a?.value ?? a;
+const anchorName = (n) => SpatialAnchor.keys?.find((k) => anchorNumber(SpatialAnchor[k]) === n) ?? DEFAULTS.anchor;
+
+function loadSettings() {
+  try {
+    return readSettings(File.readAll(settingsPath()).toString());
+  } catch {
+    return readSettings(null); // no file yet, or the Desktop isn't allowed
+  }
+}
+
+// Returns null when saved, or the reason it couldn't be.
+function saveSettings(text) {
+  try {
+    const f = File.create(settingsPath(), 'wb');
+    f.writeString(text);
+    f.close();
+    return null;
+  } catch (e) {
+    return e.message || String(e);
+  }
+}
 
 function textDefinition(doc, text, size, colour, font) {
   const sb = StoryBuilder.create();
@@ -79,32 +109,47 @@ function main() {
   const current = Document.current;
   if (!current) return alert('Open a photo first.');
   const others = [...Document.all].length - 1;
+  const { remembered, settings: s } = loadSettings();
 
   const dlg = Dialog.create(TITLE);
   const col = dlg.addColumn();
   const g = col.addGroup('Text');
-  const text = g.addTextBox('Text', '© Your Name');
+  const text = g.addTextBox('Text', s.text);
   g.addStaticText('', 'Type {file} to add each photo\'s file name, e.g. the camera\'s photo number.');
   const font = g.addFontPicker('Font');
-  const colour = g.addColourPicker('Colour', Colour.createRGBA8({ r: 255, g: 255, b: 255, alpha: 255 }));
-  const size = g.addUnitValueEditor('Size (of the photo width)', UnitType.Percentage, UnitType.Percentage, 4, 1, 30).setPrecision(1);
-  const opacity = g.addUnitValueEditor('Opacity', UnitType.Percentage, UnitType.Percentage, 60, 5, 100).setPrecision(0);
+  const colour = g.addColourPicker('Colour', Colour.createRGBA8(s.colour));
+  const size = g.addUnitValueEditor('Size (of the photo width)', UnitType.Percentage, UnitType.Percentage, s.size, 1, 30).setPrecision(1);
+  const opacity = g.addUnitValueEditor('Opacity', UnitType.Percentage, UnitType.Percentage, s.opacity, 5, 100).setPrecision(0);
   const p = col.addGroup('Placement');
-  const anchor = p.addSpatialAnchor('Position', SpatialAnchor.BottomRight);
-  const repeat = p.addSwitch('Repeat across the whole photo', false);
-  const wholeOnly = p.addSwitch('When repeating, only whole copies (none cut off at the edges)', true);
+  const anchor = p.addSpatialAnchor('Position', SpatialAnchor[s.anchor] ?? SpatialAnchor.BottomRight);
+  const repeat = p.addSwitch('Repeat across the whole photo', s.repeat);
+  const wholeOnly = p.addSwitch('When repeating, only whole copies (none cut off at the edges)', s.wholeOnly);
   const scope = p.addComboBox('Add to', ['This document', `All open documents (${others + 1})`], 0);
+  const n = col.addGroup('Next time');
+  const remember = n.addSwitch('Remember these settings', remembered);
+  n.addStaticText('', 'Kept in "Watermark settings.json" on your Desktop. The font is not remembered.');
   if (dlg.runModal() !== DialogResult.Ok) return;
 
   const words = String(text.text ?? '').trim();
   if (!words) return alert('Type the watermark text.');
   const options = {
     text: words, font: font.font, colour: colour.value, size: pct(size.value), opacity: pct(opacity.value),
-    anchor: anchor.value?.value ?? anchor.value, repeat: repeat.value, wholeOnly: wholeOnly.value,
+    anchor: anchorNumber(anchor.value), repeat: repeat.value, wholeOnly: wholeOnly.value,
   };
   const docs = scope.selectedIndex === 1 ? [...Document.all] : [current];
   for (const doc of docs) watermark(doc, options);
   console.log(`${TITLE}: added to ${docs.length} document${docs.length === 1 ? '' : 's'}`);
+
+  // Turning the switch off writes a note to forget, so the next run starts from the defaults again.
+  if (!remember.value && !remembered) return;
+  const failed = saveSettings(writeSettings({
+    text: words, colour: colour.value.rgba8, size: Math.round(options.size * 1000) / 10,
+    opacity: Math.round(options.opacity * 100), anchor: anchorName(options.anchor),
+    repeat: options.repeat, wholeOnly: options.wholeOnly,
+  }, remember.value));
+  if (failed && remember.value) {
+    alert(`The watermark was added, but the settings couldn't be remembered: Affinity didn't let the script save a file on your Desktop (${failed}).\n\nTo have them remembered, open Settings → Scripting in Affinity and allow scripts to use your Desktop. Then run Watermark again.`);
+  }
 }
 
 main();

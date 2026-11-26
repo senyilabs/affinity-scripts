@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { place, tiles, whole, fillIn } from '../src/watermark.js';
+import { place, tiles, whole, fillIn, DEFAULTS, readSettings, writeSettings } from '../src/watermark.js';
 
 const page = { width: 1000, height: 600 }, text = { width: 200, height: 40 };
 
@@ -36,4 +36,23 @@ test('whole() keeps only copies that fit completely on the page', () => {
   for (const p of kept) assert.ok(p.x - ex >= 0 && p.x + ex <= page.width);
   assert.deepEqual(whole([{ x: 500, y: 300 }], page, text, 0), [{ x: 500, y: 300 }]);
   assert.deepEqual(whole([{ x: 50, y: 300 }], page, text, 0), []);
+});
+
+test('remembered settings come back as they were saved', () => {
+  const mine = { ...DEFAULTS, text: '© Wim · {file}', size: 1.5, opacity: 40, anchor: 'TopLeft' };
+  assert.deepEqual(readSettings(writeSettings(mine, true)), { remembered: true, settings: mine });
+});
+
+test('no file, a damaged file or a forget note gives the defaults', () => {
+  for (const json of [null, '', 'not json', '[]', writeSettings(DEFAULTS, false)]) {
+    assert.deepEqual(readSettings(json), { remembered: false, settings: DEFAULTS });
+  }
+});
+
+test('bad values in the file fall back one by one', () => {
+  const { settings } = readSettings(JSON.stringify({ remember: true, size: 500, opacity: 30, text: ' ', colour: { r: 1 } }));
+  assert.equal(settings.size, DEFAULTS.size);
+  assert.equal(settings.opacity, 30);
+  assert.equal(settings.text, DEFAULTS.text);
+  assert.deepEqual(settings.colour, DEFAULTS.colour);
 });
