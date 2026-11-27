@@ -2,13 +2,13 @@
 // whole(), fillIn(), DEFAULTS, readSettings() and writeSettings() are in scope. Adds the text to this document or
 // to every open one, inside an invisible page-sized frame named Watermark at the top of the layers: the frame clips
 // repeated copies at the edges of the photo, and it can be moved, edited or deleted like any other layer.
-// "Remember these settings" keeps the dialog's choices in a file on the Desktop, the one folder Affinity lets scripts
-// write to (Settings → Scripting); scripts can't ask for more access themselves. Hidden (dot) files are refused, so
-// the file has a plain name.
+// "Remember these settings" keeps the dialog's choices in an "Affinity Scripts" folder on the Desktop: the Desktop is
+// the only folder Affinity lets scripts write to (other folders allowed in Settings → Scripting were still refused in
+// Affinity 3.3), scripts can't ask for more access themselves, and hidden (dot) files are refused.
 'use strict';
 
 const { Application } = require('/application.js');
-const { File } = require('/fs.js');
+const { File, fs } = require('/fs.js');
 const { Document, SpatialAnchor } = require('/document.js');
 const { Dialog, DialogResult } = require('/dialog.js');
 const { AddChildNodesCommandBuilder, CompoundCommandBuilder, DocumentCommand } = require('/commands.js');
@@ -24,30 +24,41 @@ const { UnitType } = require('/units.js');
 
 const TITLE = 'Watermark';
 const pct = (v) => (v > 1 ? v / 100 : v); // whole percentages in Affinity 3.3; a fraction would mean an older build
-const settingsPath = () => `${Application.userDesktopPath}/Watermark settings.json`;
+const settingsFolder = () => `${Application.userDesktopPath}/Affinity Scripts`;
+const settingsPath = () => `${settingsFolder()}/Watermark settings.json`;
+const oldSettingsPath = () => `${Application.userDesktopPath}/Watermark settings.json`; // 1.3.0 kept it loose on the Desktop
 
 // SpatialAnchor is Affinity's own enum: saved by name, compared by number.
 const anchorNumber = (a) => a?.value ?? a;
 const anchorName = (n) => SpatialAnchor.keys?.find((k) => anchorNumber(SpatialAnchor[k]) === n) ?? DEFAULTS.anchor;
 
 function loadSettings() {
-  try {
-    return readSettings(File.readAll(settingsPath()).toString());
-  } catch {
-    return readSettings(null); // no file yet, or the Desktop isn't allowed
+  for (const path of [settingsPath(), oldSettingsPath()]) {
+    try {
+      return readSettings(File.readAll(path).toString());
+    } catch {
+      // no file there, or the Desktop isn't allowed
+    }
   }
+  return readSettings(null);
 }
 
-// Returns null when saved, or the reason it couldn't be.
+// Returns null when saved, or the reason it couldn't be. The 1.3.0 file is removed once the new one is written.
 function saveSettings(text) {
   try {
+    fs.createDirectories(settingsFolder());
     const f = File.create(settingsPath(), 'wb');
     f.writeString(text);
     f.close();
-    return null;
   } catch (e) {
     return e.message || String(e);
   }
+  try {
+    if (fs.exists(oldSettingsPath())) fs.remove(oldSettingsPath());
+  } catch {
+    // leaving the old file behind is harmless
+  }
+  return null;
 }
 
 function textDefinition(doc, text, size, colour, font) {
@@ -127,7 +138,7 @@ function main() {
   const scope = p.addComboBox('Add to', ['This document', `All open documents (${others + 1})`], 0);
   const n = col.addGroup('Next time');
   const remember = n.addSwitch('Remember these settings', remembered);
-  n.addStaticText('', 'Kept in "Watermark settings.json" on your Desktop. The font is not remembered.');
+  n.addStaticText('', 'Kept in the "Affinity Scripts" folder on your Desktop. The font is not remembered.');
   if (dlg.runModal() !== DialogResult.Ok) return;
 
   const words = String(text.text ?? '').trim();
