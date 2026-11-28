@@ -74,3 +74,22 @@ export function readSettings(json) {
 export function writeSettings(settings, remember) {
   return JSON.stringify(remember ? { remember: true, ...settings } : { remember: false }, null, 2) + '\n';
 }
+
+// Where the settings file may go, best first. `roots` are the folders allowed under Settings → Scripting (Affinity's
+// Environment.fileSystemRoots, which can be empty even when the Desktop works), `desktop` is the Desktop path. A folder
+// that is itself called "Affinity Scripts" (as other scripts use, e.g. Documents/Affinity Scripts) is used as it is;
+// any other allowed folder gets an "Affinity Scripts" folder inside it; the Desktop's comes last as the fallback.
+export function settingsFolders(roots, desktop) {
+  const sep = (p) => (p.includes('\\') && !p.includes('/') ? '\\' : '/');
+  const trim = (p) => String(p || '').replace(/[\\/]+$/, '');
+  const inside = (p) => `${p}${sep(p)}Affinity Scripts`;
+  const isScripts = (p) => /(^|[\\/])Affinity Scripts$/i.test(p);
+  const desk = trim(desktop);
+  const all = [...(roots || [])].map(trim).filter(Boolean);
+  const out = [];
+  const add = (p) => { if (!out.some((q) => q.toLowerCase() === p.toLowerCase())) out.push(p); };
+  all.filter(isScripts).forEach(add);
+  all.filter((p) => !isScripts(p) && p.toLowerCase() !== desk.toLowerCase()).forEach((p) => add(inside(p)));
+  if (desk) add(inside(desk));
+  return out;
+}

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { place, tiles, whole, fillIn, DEFAULTS, readSettings, writeSettings } from '../src/watermark.js';
+import { place, tiles, whole, fillIn, DEFAULTS, readSettings, writeSettings, settingsFolders } from '../src/watermark.js';
 
 const page = { width: 1000, height: 600 }, text = { width: 200, height: 40 };
 
@@ -55,4 +55,15 @@ test('bad values in the file fall back one by one', () => {
   assert.equal(settings.opacity, 30);
   assert.equal(settings.text, DEFAULTS.text);
   assert.deepEqual(settings.colour, DEFAULTS.colour);
+});
+
+test('settings folders: an allowed "Affinity Scripts" folder first, the Desktop last', () => {
+  const desk = '/Users/w/Desktop';
+  assert.deepEqual(settingsFolders([], desk), ['/Users/w/Desktop/Affinity Scripts']);
+  assert.deepEqual(settingsFolders(['/Users/w/Desktop'], desk), ['/Users/w/Desktop/Affinity Scripts']);
+  assert.deepEqual(settingsFolders(['/Users/w/Desktop', '/Users/w/Documents/Affinity Scripts/'], desk),
+    ['/Users/w/Documents/Affinity Scripts', '/Users/w/Desktop/Affinity Scripts']);
+  assert.deepEqual(settingsFolders(['/Users/w/Pictures'], desk), ['/Users/w/Pictures/Affinity Scripts', '/Users/w/Desktop/Affinity Scripts']);
+  assert.deepEqual(settingsFolders(['C:\\Users\\w\\Documents'], 'C:\\Users\\w\\Desktop'),
+    ['C:\\Users\\w\\Documents\\Affinity Scripts', 'C:\\Users\\w\\Desktop\\Affinity Scripts']);
 });
